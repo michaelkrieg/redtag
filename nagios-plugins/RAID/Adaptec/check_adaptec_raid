@@ -1,0 +1,55 @@
+#!/bin/bash
+#############################################################################
+#############################################################################
+#
+# check_adaptec_raid
+#
+#############################################################################
+#
+# Hash:     75451ec8e10f586e40fec959a7522dcf
+# Location: /usr/local/nagios/libexec/check_adaptec_raid
+#
+#############################################################################
+#############################################################################
+
+
+
+
+
+NAGIOS_TMP_DIR="/usr/local/nagios/tmp"
+STATE_FILE="$NAGIOS_TMP_DIR/check_adaptec_raid"
+
+
+
+#############################################################################
+# main
+#############################################################################
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+
+FILE="$(find "$STATE_FILE.result" -maxdepth 1 -type f -mmin -10 2>/dev/null)"
+if [ -r "$FILE" ]; then
+	TEXT="$( { cat $FILE; sleep 2; cat "$FILE"; } | head -n 1)"
+fi
+
+echo -n "RAID "
+if [ ! -r "$FILE" ]; then
+	echo "CRITICAL ['$STATE_FILE.result' too old, helper cronjob not running ?]"
+	RESULT="$STATE_CRITICAL"
+elif [ "${TEXT/CRITICAL}" != "$TEXT" ]; then
+	echo "$TEXT"
+	RESULT="$STATE_CRITICAL"
+elif [ "${TEXT/WARNING}" != "$TEXT" ]; then
+	echo "$TEXT"
+	RESULT="$STATE_WARNING"
+elif [ "${TEXT/OK}" != "$TEXT" ]; then
+	echo "$TEXT"
+	RESULT="$STATE_OK"
+else
+	echo "CRITICAL ['$STATE_FILE.result' contains no valid status]"
+	RESULT="$STATE_CRITICAL"
+fi
+
+exit $RESULT
+################################################################### red-tag #

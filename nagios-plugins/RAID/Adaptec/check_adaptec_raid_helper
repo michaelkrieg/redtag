@@ -1,0 +1,79 @@
+#!/bin/bash
+#############################################################################
+#############################################################################
+#
+# check_adaptec_raid_helper
+#
+#############################################################################
+#
+# Hash:     e30bc3fe9038053b9afb096fde9d89bb
+# Location: /usr/local/nagios/libexec/check_adaptec_raid_helper
+# Crontab:  */5 * * * * [ -x /usr/local/nagios/libexec/check_adaptec_raid_helper ] && /usr/local/nagios/libexec/check_adaptec_raid_helper
+#
+#############################################################################
+#############################################################################
+
+
+
+
+
+NAGIOS_TMP_DIR="/usr/local/nagios/tmp"
+NAGIOS_ETC_DIR="/usr/local/nagios/etc"
+
+STATE_FILE="$NAGIOS_TMP_DIR/check_adaptec_raid"
+
+
+
+#############################################################################
+# main
+#############################################################################
+(
+{
+if [ -x /usr/local/nagios/libexec/arcconf ]; then
+	/usr/local/nagios/libexec/arcconf GETCONFIG 1 LD
+	/usr/local/nagios/libexec/arcconf GETCONFIG 1 PD
+else
+	echo "arcconf binary not found"
+fi
+} |
+tr '\t' ' ' |
+sed -n  \
+	-e '/^arcconf binary not found$/p'			\
+	-e '/^Logical device number /s//Logical Device #/p'	\
+	-e '/^   RAID level /p'					\
+	-e '/^   Status of logical device /s//   Status /p'	\
+	-e '/^      Device /s//       Physical Device /p'	\
+	-e '/^         State /p'				\
+	-e '/^         Model /p' |
+sed -e 's/  */ /g' -e 's/^ //' -e 's/ $//' -e 's/ :/:/g' |
+awk 'BEGIN {
+	status_critical = 1;
+	state_critical = 1;
+	}
+
+	{
+	if ($0 ~ /^Physical /) line = line "] [" $0;
+	else if (line != "") line = line ", " $0;
+	else line = $0;
+	}
+
+/^Status: / {
+	if ($2 == "Optimal") status_critical = 0;
+	else status_critical = 1;
+	}
+
+/^State: / {
+	if ($2 == "Online") state_critical = 0;
+	else state_critical = 1;
+	}
+
+END {
+	if ((status_critical) || (state_critical)) printf("CRITICAL");
+	else printf("OK");
+	if (line != "") printf(" [%s]\n", line);
+	}'
+) > "$STATE_FILE.result.tmp"
+
+cat "$STATE_FILE.result.tmp" > "$STATE_FILE.result"
+rm -f "$STATE_FILE.result.tmp"
+################################################################### red-tag #
