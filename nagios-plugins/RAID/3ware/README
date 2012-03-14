@@ -1,0 +1,42 @@
+Nagios Plugin to check health of 3ware RAID controllers and RAID status
+-----------------------------------------------------------------------
+
+
+Requirements
+------------
+- Nagios 3 or newer
+- NRPE configured at the RAID host
+- tw_cli by 3ware: http://bit.ly/zgzlVq
+
+
+Installation
+------------
+
+Assume your Nagios plugins are located under /usr/local/nagios/ - otherwise adjust the
+path settings below as needed.
+
+Make sure you added the helper (bundled by this plugin) to the root crontab of the system:
+e.g.: running the helper every 5 minutes:
+
+  */5 * * * * [ -x /usr/local/nagios/libexec/check_3ware_raid_helper ] && /usr/local/nagios/libexec/check_3ware_raid_helper
+
+
+In your nrpe configuration file, add a line like this:
+ 
+  command[check_3ware_raid]=/usr/local/nagios/libexec/check_3ware_raid
+
+Restart the nrpe daemon.
+
+On the other side (Nagios monitoring host), configure the new check command, e.g.:
+
+  define service{
+          use                             generic-service
+          host_name                       host-with-3ware-raid
+          service_description             3ware RAID
+          check_command                   check_nrpe!check_3ware_raid
+          contact_groups                  admins
+  }
+
+Reload Nagios configuration and see how it works.
+
+
