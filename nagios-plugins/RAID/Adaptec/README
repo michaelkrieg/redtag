@@ -19,6 +19,8 @@ e.g.: running the helper every 5 minutes:
 
   */5 * * * * [ -x /usr/local/nagios/libexec/check_adaptec_raid_helper ] && /usr/local/nagios/libexec/check_adaptec_raid_helper
 
+Note: the directory /usr/local/nagios/tmp is necessary / required and it must be writable by the Nagios helper scripts!
+
 
 In your nrpe configuration file, add a line like this:
  
