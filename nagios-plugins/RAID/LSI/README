@@ -1,0 +1,43 @@
+Nagios Plugin to check health of LSI RAID controllers and RAID status
+-------------------------------------------------------------------------
+
+
+Requirements
+------------
+- Nagios 3 or newer
+- NRPE configured at the RAID host
+- MegaRAID / Megacli Tool 
+
+Installation
+------------
+
+Assume your Nagios plugins are located under /usr/local/nagios/ - otherwise adjust the
+path settings below as needed.
+
+Make sure you added the helper (bundled by this plugin) to the root crontab of the system:
+e.g.: running the helper every 5 minutes:
+
+  */5 * * * * [ -x /usr/local/nagios/libexec/check_lsi_raid_helper ] && /usr/local/nagios/libexec/check_lsi_raid_helper
+
+Note: the directory /usr/local/nagios/tmp is necessary / required and it must be writable by the Nagios helper scripts!
+
+
+In your nrpe configuration file, add a line like this:
+ 
+  command[check_lsi_raid]=/usr/local/nagios/libexec/check_lsi_raid
+
+Restart the nrpe daemon.
+
+On the other side (Nagios monitoring host), configure the new check command, e.g.:
+
+  define service{
+          use                             generic-service
+          host_name                       host-with-lsi-raid
+          service_description             LSI RAID
+          check_command                   check_nrpe!check_lsi_raid
+          contact_groups                  admins
+  }
+
+Reload Nagios configuration and see how it works.
+
+

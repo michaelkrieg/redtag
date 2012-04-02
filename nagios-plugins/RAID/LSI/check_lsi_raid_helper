@@ -1,0 +1,105 @@
+#!/bin/bash
+#############################################################################
+#############################################################################
+#
+# check_lsi_raid_helper
+#
+#############################################################################
+#
+# Hash:     03f6b1f7da4d579e365fec0406756c92
+# Location: /usr/lib/nagios/plugins/check_lsi_raid_helper
+# Crontab:  */5 * * * * [ -x /usr/lib/nagios/plugins/check_lsi_raid_helper ] && /usr/lib/nagios/plugins/check_lsi_raid_helper
+#
+#############################################################################
+#############################################################################
+
+
+
+
+
+NAGIOS_TMP_DIR="/usr/local/nagios/tmp"
+NAGIOS_ETC_DIR="/usr/local/nagios/etc"
+
+STATE_FILE="$NAGIOS_TMP_DIR/check_lsi_raid"
+
+
+
+#############################################################################
+# main
+#############################################################################
+(
+if [ -x /opt/MegaRAID/MegaCli/MegaCli64 ]; then
+	/opt/MegaRAID/MegaCli/MegaCli64 -LDInfo -Lall -Aall -NoLog |
+	awk '/^State *: Optimal$/ {
+		printf(" [controller state: optimal]");
+		next;
+		}
+
+	/^State *: / {
+		printf(" [controller state: __CRITICAL__ %s]", $3);
+		}'
+
+	/opt/MegaRAID/MegaCli/MegaCli64 -PDList -Aall -NoLog |
+	awk '/^Slot Number: / {
+		slot_number = $3;
+		}
+
+	/^Firmware state: Online, Spun Up$/ {
+		online[slot_number] = 1;
+		next;
+		}
+
+	/^Firmware state: Hotspare, Spun (Up|down)$/ {
+		hotspare[slot_number] = 1;
+		next;
+		}
+
+	/^Firmware state: / {
+		unknown[slot_number] = 1;
+		}
+
+	/^Media Error Count: / {
+		if ($4 > 0) errors[slot_number] = 1;
+		}
+
+	END {
+		printf(" [slots online:");
+		for (i in online) printf(" %s", i);
+		printf("]");
+
+		printf(" [slots hotspare:");
+		for (i in hotspare) printf(" %s", i);
+		printf("]");
+
+		j = 0;
+		for (i in unknown) j++;
+		for (i in errors) j++;
+		if (j > 0)
+			{
+			printf(" [slots with errors:");
+			for (i in unknown) printf(" __CRITICAL__ %s", i);
+			for (i in errors) printf(" __CRITICAL__ %s", i);
+			printf("]");
+			}
+		}'
+else
+	echo "[__CRITICAL__ MegaCli64 binary not found]"
+fi |
+awk '{
+	if ($0 ~ /__CRITICAL__/)
+		{
+		gsub(/__CRITICAL__/, "");
+		printf("CRITICAL");
+		}
+	else printf("OK");
+	gsub(/ +/, " ");
+	sub(/^ */, "");
+	sub(/ *$/, "");
+	if ($0 != "") printf(" %s", $0);
+	printf("\n");
+	}'
+) > "$STATE_FILE.result.tmp"
+
+cat "$STATE_FILE.result.tmp" > "$STATE_FILE.result"
+rm -f "$STATE_FILE.result.tmp"
+################################################################### red-tag #
